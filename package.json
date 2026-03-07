@@ -1,0 +1,20 @@
+{
+  "name": "ai-governance-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise AI Agent Governance Monitoring Platform",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "db:migrate": "pnpm --filter @governance/api db:migrate",
+    "db:seed": "pnpm --filter @governance/api db:seed",
+    "docker:up": "docker compose -f infrastructure/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infrastructure/docker-compose.yml down"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

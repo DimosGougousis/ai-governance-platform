@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: gov-postgres
+    environment:
+      POSTGRES_USER: governance
+      POSTGRES_PASSWORD: governance
+      POSTGRES_DB: governance
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U governance"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: gov-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2-alpine
+    container_name: gov-nats
+    command: ["--jetstream"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+volumes:
+  pgdata:
