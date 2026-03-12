@@ -4,8 +4,8 @@ import { sql, eq, desc } from 'drizzle-orm';
 
 export async function dashboardRoutes(app: FastifyInstance) {
 
-  // GET /governance/dashboard/tier/:tier — tier-specific dashboard data
-  app.get('/governance/dashboard/tier/:tier', async (request, reply) => {
+  // GET /dashboard/tier/:tier — tier-specific dashboard data
+  app.get('/dashboard/tier/:tier', async (request, reply) => {
     const tier = parseInt((request.params as { tier: string }).tier, 10);
     if (isNaN(tier) || tier < 1 || tier > 4) return reply.code(400).send({ error: 'Tier must be 1-4' });
 
