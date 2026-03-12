@@ -8,16 +8,9 @@ const NAV_ITEMS = [
   { section: 'Dashboards', items: [
     { href: '/dashboard/board', label: 'Board (Tier 1)', icon: '📊' },
     { href: '/dashboard/team', label: 'Team (Tier 3)', icon: '👥' },
-    { href: '/dashboard/runtime', label: 'Runtime (Tier 4)', icon: '⚡' },
   ]},
   { section: 'Fleet', items: [
     { href: '/agents', label: 'Agent Registry', icon: '🤖' },
-  ]},
-  { section: 'Compliance', items: [
-    { href: '/compliance/safest', label: 'SAFEST Tracker', icon: '✅' },
-  ]},
-  { section: 'Monitoring', items: [
-    { href: '/monitoring/containment', label: 'Containment', icon: '🛡️' },
   ]},
 ];
 
