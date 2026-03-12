@@ -91,7 +91,7 @@ export async function governanceRoutes(app: FastifyInstance) {
   });
 
   // GET /governance/integrations — list ingestion sources with status
-  app.get('/integrations', async () => {
+  app.get('/governance/integrations', async () => {
     const sources = await db.select().from(schema.ingestionSources);
     return { data: sources };
   });

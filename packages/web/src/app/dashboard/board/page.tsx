@@ -98,14 +98,14 @@ export default function BoardDashboard() {
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Containment Status</h2>
         <div className="grid grid-cols-5 gap-4">
-          {['0', '1', '2', '3', '4'].map(level => {
-            const count = data.containmentSummary?.[level] || 0;
+          {[0, 1, 2, 3, 4].map(level => {
+            const count = data.containmentSummary?.[`level${level}`] || 0;
             const labels = ['Standard', 'State-Preserving', 'Planning Lock', 'Tool Restriction', 'Isolation'];
             const colors = ['bg-green-50 text-green-700', 'bg-yellow-50 text-yellow-700', 'bg-orange-50 text-orange-700', 'bg-red-50 text-red-700', 'bg-red-100 text-red-900'];
             return (
-              <div key={level} className={`text-center p-4 rounded-lg ${colors[parseInt(level)]}`}>
+              <div key={level} className={`text-center p-4 rounded-lg ${colors[level]}`}>
                 <p className="text-2xl font-semibold">{count}</p>
-                <p className="text-xs mt-1">L{level}: {labels[parseInt(level)]}</p>
+                <p className="text-xs mt-1">L{level}: {labels[level]}</p>
               </div>
             );
           })}

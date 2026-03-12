@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { eq, and } from 'drizzle-orm';
-import { validateContract } from './contract-validator.js';
+import { validateContract, checkContractCompliance } from './contract-validator.js';
 import { normalize } from './normalizer.js';
 import { db } from '../db/connection.js';
 import {
@@ -113,7 +113,6 @@ export async function registerWebhookReceiver(app: FastifyInstance) {
         .filter(s => s.enabled && s.lastReceivedAt)
         .map(s => s.contractType as ContractType);
 
-      const { checkContractCompliance } = await import('./contract-validator.js');
       const compliance = checkContractCompliance(agent.riskTier, satisfiedContracts);
 
       return {

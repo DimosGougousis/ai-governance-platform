@@ -10,8 +10,9 @@ const app = Fastify({ logger: true });
 
 await app.register(cors, { origin: true });
 
-// Health check
+// Health check (both root and under API prefix for Docker/Nginx)
 app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/api/v1/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // API routes
 app.register(agentRoutes, { prefix: '/api/v1' });

@@ -146,14 +146,14 @@ async function seed() {
 
   // Seed ingestion sources for first two agents
   await db.insert(schema.ingestionSources).values([
-    { agentId: insertedAgents[0].id, contractType: 'C2' as any, providerName: 'custom-healthcheck', protocol: 'webhook' as any, enabled: true, lastReceivedAt: new Date() },
-    { agentId: insertedAgents[0].id, contractType: 'C3' as any, providerName: 'langsmith', protocol: 'otlp' as any, enabled: true, lastReceivedAt: new Date() },
-    { agentId: insertedAgents[0].id, contractType: 'C4' as any, providerName: 'langfuse', protocol: 'webhook' as any, enabled: true, lastReceivedAt: new Date() },
-    { agentId: insertedAgents[1].id, contractType: 'C2' as any, providerName: 'custom-healthcheck', protocol: 'webhook' as any, enabled: true, lastReceivedAt: new Date() },
-    { agentId: insertedAgents[1].id, contractType: 'C3' as any, providerName: 'arize-phoenix', protocol: 'otlp' as any, enabled: true, lastReceivedAt: new Date() },
-    { agentId: insertedAgents[1].id, contractType: 'C4' as any, providerName: 'custom-billing', protocol: 'webhook' as any, enabled: true },
-    { agentId: insertedAgents[1].id, contractType: 'C5' as any, providerName: 'arize-phoenix', protocol: 'webhook' as any, enabled: true },
-    { agentId: insertedAgents[1].id, contractType: 'C7' as any, providerName: 'custom-sdk', protocol: 'webhook' as any, enabled: true },
+    { agentId: insertedAgents[0].id, contractType: 'C2' as const, providerName: 'custom-healthcheck', protocol: 'webhook' as const, enabled: true, lastReceivedAt: new Date() },
+    { agentId: insertedAgents[0].id, contractType: 'C3' as const, providerName: 'langsmith', protocol: 'otlp' as const, enabled: true, lastReceivedAt: new Date() },
+    { agentId: insertedAgents[0].id, contractType: 'C4' as const, providerName: 'langfuse', protocol: 'webhook' as const, enabled: true, lastReceivedAt: new Date() },
+    { agentId: insertedAgents[1].id, contractType: 'C2' as const, providerName: 'custom-healthcheck', protocol: 'webhook' as const, enabled: true, lastReceivedAt: new Date() },
+    { agentId: insertedAgents[1].id, contractType: 'C3' as const, providerName: 'arize-phoenix', protocol: 'otlp' as const, enabled: true, lastReceivedAt: new Date() },
+    { agentId: insertedAgents[1].id, contractType: 'C4' as const, providerName: 'custom-billing', protocol: 'webhook' as const, enabled: true },
+    { agentId: insertedAgents[1].id, contractType: 'C5' as const, providerName: 'arize-phoenix', protocol: 'webhook' as const, enabled: true },
+    { agentId: insertedAgents[1].id, contractType: 'C7' as const, providerName: 'custom-sdk', protocol: 'webhook' as const, enabled: true },
   ]);
   console.log('Inserted demo ingestion sources');
 

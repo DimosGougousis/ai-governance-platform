@@ -75,7 +75,7 @@ export function normalizeC5Drift(validated: Record<string, unknown>): Normalized
       score: String(validated.score),
       severity: validated.severity,
       features: validated.features || {},
-      detectionMethod: validated.statisticalTest,
+      detectionMethod: (validated.detectionMethod || validated.statisticalTest) as string,
       remediationStatus: 'pending',
       timestamp: ts,
     },
@@ -113,9 +113,7 @@ export function normalizeC7Decision(validated: Record<string, unknown>): Normali
       authorityLevel: validated.authorityLevel,
       confidenceScore: String(validated.confidenceScore),
       monetaryImpact: validated.monetaryImpact ? String(validated.monetaryImpact) : null,
-      reversibility: validated.reversibility === 'full' ? 'reversible'
-        : validated.reversibility === 'partial' ? 'partially_reversible'
-        : 'irreversible',
+      reversibility: validated.reversibility,
       humanInvolvement: 'none',
       timestamp: ts,
     },

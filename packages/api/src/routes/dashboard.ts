@@ -7,7 +7,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
   // GET /governance/dashboard/tier/:tier — tier-specific dashboard data
   app.get('/governance/dashboard/tier/:tier', async (request, reply) => {
     const tier = parseInt((request.params as { tier: string }).tier, 10);
-    if (tier < 1 || tier > 4) return reply.code(400).send({ error: 'Tier must be 1-4' });
+    if (isNaN(tier) || tier < 1 || tier > 4) return reply.code(400).send({ error: 'Tier must be 1-4' });
 
     const agents = await db.select().from(schema.agents);
     const safestItems = await db.select().from(schema.safestItems);

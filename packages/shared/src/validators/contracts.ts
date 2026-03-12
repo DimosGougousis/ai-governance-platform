@@ -100,7 +100,7 @@ export const contractC7Schema = z.object({
   authorityLevel: z.enum(['A1', 'A2', 'A3', 'A4', 'A5']),
   confidenceScore: z.number().min(0).max(1),
   monetaryImpact: z.number().default(0),
-  reversibility: z.enum(['full', 'partial', 'irreversible']),
+  reversibility: z.enum(['reversible', 'partially_reversible', 'irreversible']),
   delegatedTo: z.string().uuid().nullable().default(null),
   traceId: z.string().optional(),
   reasoning: z.string().optional(),

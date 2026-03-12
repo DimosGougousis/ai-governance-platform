@@ -178,7 +178,7 @@ export default function AgentDetailPage() {
               <div>
                 <p className="text-xs text-gray-400 mb-2">Functions</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {(agent.functions as string[] || []).map(fn => (
+                  {((agent.functions as string[]) ?? []).map(fn => (
                     <span key={fn} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 font-mono">{fn}</span>
                   ))}
                 </div>
@@ -186,7 +186,7 @@ export default function AgentDetailPage() {
               <div>
                 <p className="text-xs text-gray-400 mb-2">Out of Scope</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {(agent.outOfScope as string[] || []).map(fn => (
+                  {((agent.outOfScope as string[]) ?? []).map(fn => (
                     <span key={fn} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-red-50 text-red-700 font-mono">{fn}</span>
                   ))}
                 </div>

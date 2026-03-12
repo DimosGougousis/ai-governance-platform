@@ -1,18 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, desc } from 'drizzle-orm';
 import { db, schema } from '../db/connection.js';
-import { createAgentSchema, updateAgentSchema, ariScoresSchema } from '@governance/shared';
+import { createAgentSchema, updateAgentSchema, ariScoresSchema, CONTAINMENT_DEFAULTS } from '@governance/shared';
 import { computeARIScore, ariToContainmentLevel } from '@governance/shared';
 
 export async function agentRoutes(app: FastifyInstance) {
 
   // GET /agents — list all agents
-  app.get('/agents', async (request) => {
-    const { team, riskTier, healthState } = request.query as Record<string, string>;
-
-    let query = db.select().from(schema.agents);
-
-    // Note: filtering would use .where() chains — simplified for MVP
+  app.get('/agents', async () => {
     const agents = await db.select().from(schema.agents);
     return { data: agents, total: agents.length };
   });
@@ -135,7 +130,6 @@ export async function agentRoutes(app: FastifyInstance) {
 
     if (!agent) return reply.code(404).send({ error: 'Agent not found' });
 
-    const { CONTAINMENT_DEFAULTS } = await import('@governance/shared');
     const level = agent.currentContainmentLevel as 0 | 1 | 2 | 3 | 4;
 
     return {
