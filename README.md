@@ -179,7 +179,7 @@ ai-governance-platform/
 | `POST` | `/api/v1/ingest/:contractType` | Ingest data via webhook (C2,C4,C5,C6,C7) |
 | `POST` | `/api/v1/ingest/bulk` | Bulk data import |
 | `GET` | `/api/v1/governance/integrations` | List ingestion sources |
-| `GET` | `/api/v1/governance/dashboard/tier/:tier` | Tier-specific dashboard data |
+| `GET` | `/api/v1/dashboard/tier/:tier` | Tier-specific dashboard data |
 | `GET` | `/api/v1/governance/safest` | SAFEST compliance items |
 
 ## Dashboard Tiers
