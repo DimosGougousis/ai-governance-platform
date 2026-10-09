@@ -9,4 +9,6 @@ export const GOVERNANCE_FILES = [
   ['05-cross-cutting/policy-as-code/examples/example-agent-passport.yaml', 'registry/passports/finley.yaml'],
   ['05-cross-cutting/policy-as-code/examples/example-mcp-server.yaml', 'registry/mcp-servers/customer-data.yaml'],
   ['05-cross-cutting/policy-as-code/examples/example-agent-boundary.yaml', 'registry/boundaries/finley.yaml'],
+  ['05-cross-cutting/policy-as-code/cedar/schema.cedarschema', 'cedar/schema.cedarschema'],
+  ['05-cross-cutting/policy-as-code/cedar/tool-call.cedar', 'cedar/tool-call.cedar'],
 ];
