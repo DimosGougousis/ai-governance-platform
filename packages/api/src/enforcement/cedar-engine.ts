@@ -31,14 +31,20 @@ export function createCedarEngine(policyText: string, schemaText: string): Cedar
   const parts = cedar.policySetTextToParts(text);
   if (parts.type !== 'success') throw new Error(`Cedar policy does not parse: ${messages(parts.errors)}`);
 
-  const byId: Record<string, string> = {};
+  // Templates would be silently ignored by the id re-keying below.
+  if (parts.policy_templates.length > 0) {
+    throw new Error('Cedar policy templates are not supported');
+  }
+
+  // A null-prototype object keeps every @id an own key, including "__proto__".
+  const byId: Record<string, string> = Object.create(null);
   for (const policy of parts.policies) {
     const json = cedar.policyToJson(policy);
     if (json.type !== 'success') throw new Error(`Cedar policy does not parse: ${messages(json.errors)}`);
     const id = json.json.annotations?.id;
     if (!id) throw new Error(`Cedar policy has no @id annotation: ${policy.slice(0, 80)}`);
-    if (byId[id]) throw new Error(`Duplicate Cedar policy @id: ${id}`);
-    byId[id] = policy;
+    if (Object.hasOwn(byId, id)) throw new Error(`Duplicate Cedar policy @id: ${id}`);
+    Object.defineProperty(byId, id, { value: policy, enumerable: true, writable: true, configurable: true });
   }
   const policies = { staticPolicies: byId };
 

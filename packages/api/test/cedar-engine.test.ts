@@ -87,3 +87,56 @@ describe('a malformed policy set is refused at load', () => {
     expect(() => createCedarEngine(p, schema)).toThrow(/validation/);
   });
 });
+
+describe('evaluation fails closed', () => {
+  const schema = `namespace Governance {
+    entity Agent;
+    entity Operation;
+    action invoke, invoke_unattended appliesTo { principal: [Agent], resource: [Operation], context: { n: Long } };
+  }`;
+  const call = (context: Record<string, unknown>): CedarInput => ({
+    agent: { id: 'a', attrs: {} },
+    operation: { id: 'o', attrs: {} },
+    context: context as never,
+  });
+  const permit = '@id("p")\npermit (principal, action, resource);';
+  const overflow = '@id("f")\nforbid (principal, action, resource) when { context.n + 9223372036854775807 > 0 };';
+
+  test('the permit alone allows, so an erroring forbid would otherwise fail open', () => {
+    const r = createCedarEngine(permit, schema).evaluate(call({ n: 1 }));
+    expect(r.invoke.allowed).toBe(true);
+  });
+
+  test('a policy that errors at evaluation fails the evaluation instead of being skipped', () => {
+    const engine = createCedarEngine(`${permit}\n${overflow}`, schema);
+    expect(() => engine.evaluate(call({ n: 1 }))).toThrow(/Cedar policy errored/);
+  });
+
+  test('a request that does not match the schema fails the evaluation', () => {
+    const engine = createCedarEngine(permit, schema);
+    expect(() => engine.evaluate(call({}))).toThrow(/Cedar evaluation failed/);
+    expect(() => engine.evaluate(call({ n: 'one' }))).toThrow(/Cedar evaluation failed/);
+  });
+});
+
+describe('policy ids and templates', () => {
+  const schema = `namespace Governance {
+    entity Agent;
+    entity Operation;
+    action invoke, invoke_unattended appliesTo { principal: [Agent], resource: [Operation] };
+  }`;
+  const call: CedarInput = { agent: { id: 'a', attrs: {} }, operation: { id: 'o', attrs: {} }, context: {} };
+
+  test.each(['__proto__', 'constructor', 'toString', 'hasOwnProperty'])('@id("%s") is counted and enforced', (id) => {
+    const engine = createCedarEngine(`@id("p")\npermit (principal, action, resource);\n@id("${id}")\nforbid (principal, action, resource);`, schema);
+    expect(engine.policyCount).toBe(2);
+    const r = engine.evaluate(call);
+    expect(r.invoke.allowed).toBe(false);
+    expect(r.invoke.reasons).toEqual([id]);
+  });
+
+  test('a policy template is refused rather than ignored', () => {
+    const template = '@id("t")\npermit (principal == ?principal, action, resource);';
+    expect(() => createCedarEngine(`@id("p")\npermit (principal, action, resource);\n${template}`, schema)).toThrow(/template/i);
+  });
+});
