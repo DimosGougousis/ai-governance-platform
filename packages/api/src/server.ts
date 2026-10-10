@@ -1,7 +1,9 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApp } from './app.js';
-import { createEnforcement, MemoryStateStore } from './enforcement/index.js';
+import { createEnforcement } from './enforcement/index.js';
+import { PgStateStore } from './enforcement/pg-state-store.js';
+import { db } from './db/connection.js';
 
 const governanceDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../governance');
 
@@ -9,7 +11,7 @@ const enforcement = createEnforcement({
   registryDir: process.env.GOVERNANCE_REGISTRY_DIR || path.join(governanceDir, 'registry'),
   schemaDir: process.env.GOVERNANCE_SCHEMA_DIR || path.join(governanceDir, 'schemas'),
   cedarDir: process.env.CEDAR_POLICY_DIR || path.join(governanceDir, 'cedar'),
-  store: new MemoryStateStore(),
+  store: new PgStateStore(db),
 });
 
 const app = await buildApp(enforcement);
