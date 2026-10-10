@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
 
 const connectionString = process.env.DATABASE_URL || 'postgresql://governance:governance@localhost:5433/governance';
@@ -9,7 +10,7 @@ async function runMigrations() {
   const db = drizzle(sql);
 
   console.log('Running migrations...');
-  await migrate(db, { migrationsFolder: './src/db/migrations' });
+  await migrate(db, { migrationsFolder: fileURLToPath(new URL('./migrations', import.meta.url)) });
   console.log('Migrations complete!');
 
   await sql.end();

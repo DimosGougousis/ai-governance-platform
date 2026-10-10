@@ -83,6 +83,31 @@ describe('decide -- Finley scenarios (layer A)', () => {
     const r = await decide(d, request({ observed_description_sha256: SG_SHA }));
     expect(r).toMatchObject({ decision: 'deny', enforced: false, reasons: ['forbid-description-mismatch'] });
   });
+
+  // A kill switch that a log-only flag disables is not a kill switch.
+  describe('a log_only passport never disarms containment or the approval gate', () => {
+    const logOnly = (f: RegistryFiles) => { f.passport = f.passport.replace('mode: enforce', 'mode: log_only'); };
+
+    test('containment level 4 is enforced', async () => {
+      const { d } = deps({ containment: 4, edit: logOnly });
+      expect(await decide(d, request())).toMatchObject({ decision: 'deny', enforced: true, reasons: expect.arrayContaining(['forbid-containment-isolation']) });
+    });
+
+    test('containment level 3 with a write operation is enforced', async () => {
+      const { d } = deps({ containment: 3, edit: (f) => { logOnly(f); writeOperation(f); } });
+      expect(await decide(d, request())).toMatchObject({ decision: 'deny', enforced: true, reasons: expect.arrayContaining(['forbid-containment-declawed']) });
+    });
+
+    test('a suspended passport is enforced', async () => {
+      const { d } = deps({ edit: (f) => { logOnly(f); f.passport = f.passport.replace('status: approved', 'status: suspended'); } });
+      expect(await decide(d, request())).toMatchObject({ decision: 'deny', enforced: true, reasons: expect.arrayContaining(['forbid-passport-not-approved']) });
+    });
+
+    test('a description mismatch alone stays unenforced', async () => {
+      const { d } = deps({ edit: logOnly });
+      expect(await decide(d, request({ observed_description_sha256: SG_SHA }))).toMatchObject({ decision: 'deny', enforced: false });
+    });
+  });
 });
 
 describe('decide -- verification failures always deny and are enforced', () => {

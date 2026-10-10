@@ -25,11 +25,14 @@ describe.skipIf(!governanceRepo)('gateway → PDP → upstream, end to end (laye
   const cleanups: (() => Promise<unknown>)[] = [];
   afterEach(async () => { while (cleanups.length) await cleanups.pop()!(); });
 
-  async function world({ hitl = false } = {}) {
+  async function world({ hitl = false, logOnly = false } = {}) {
     const { createGateway, startFakeUpstream, listen, closeServer, mcpPost } = loadGateway();
     const store = new MemoryStateStore();
     store.setAgent(FINLEY, 0);
-    const registryDir = copyRegistry((f) => { if (hitl) f.boundary = f.boundary.replace(/read: hota/, 'read: hitl'); });
+    const registryDir = copyRegistry((f) => {
+      if (hitl) f.boundary = f.boundary.replace(/read: hota/, 'read: hitl');
+      if (logOnly) f.passport = f.passport.replace('mode: enforce', 'mode: log_only');
+    });
     const app = await buildApp(createEnforcement({ registryDir, schemaDir: SCHEMA_DIR, cedarDir: CEDAR_DIR, store, now: () => FIXED_NOW }), { logger: false });
     const pdpUrl = await app.listen({ port: 0, host: '127.0.0.1' });
     cleanups.push(() => app.close());
@@ -82,6 +85,16 @@ describe.skipIf(!governanceRepo)('gateway → PDP → upstream, end to end (laye
     const r = await w.call('get_transactions', 'C-1001');
     expect(r.json.result.content[0].text).toContain('forbid-containment-isolation');
     expect(w.upstream.toolCalls()).toHaveLength(1);
+  });
+
+  test('4b. a log_only agent at containment level 4 is still blocked', async () => {
+    const w = await world({ logOnly: true });
+    w.store.setAgent(FINLEY, 4);
+    const r = await w.call('get_transactions', 'C-1001');
+    expect(r.json.result.isError).toBe(true);
+    expect(r.json.result.content[0].text).toContain('forbid-containment-isolation');
+    expect(w.upstream.toolCalls()).toHaveLength(0);
+    expect(w.store.decisions.at(-1)).toMatchObject({ decision: 'deny', enforced: true });
   });
 
   test('5. a HITL call escalates, runs once after approval, then escalates again', async () => {

@@ -20,16 +20,20 @@ export class PgStateStore implements StateStore {
   constructor(private readonly db: PostgresJsDatabase<typeof schema>) {}
 
   async getAgent(spiffeId: string) {
-    const [row] = await this.db
+    // spiffe_id is not unique in the schema. Two rows claiming one identity make the
+    // containment level ambiguous, so report none and let decide() deny.
+    const rows = await this.db
       .select({ id: schema.agents.id, containmentLevel: schema.agents.currentContainmentLevel })
-      .from(schema.agents).where(eq(schema.agents.spiffeId, spiffeId)).limit(1);
-    return row ?? null;
+      .from(schema.agents).where(eq(schema.agents.spiffeId, spiffeId)).limit(2);
+    return rows.length === 1 ? rows[0] : null;
   }
 
   async consumeApproval(k: ApprovalKey, decisionId: string, now: Date) {
     // One ticket, once: the row is locked, and the outer status check means a
-    // second concurrent retry finds nothing to consume. Raw sql`` bypasses
-    // drizzle's column mapping, so the timestamp is bound as an ISO string.
+    // second concurrent retry finds nothing to consume. The timestamp is bound as an
+    // ISO string because drizzle-orm's postgres-js driver replaces postgres.js's
+    // timestamp serializers with identity functions, so a raw Date in sql`` is never
+    // converted and fails at Bind.
     const at = now.toISOString();
     const rows = await this.db.execute<{ id: string }>(sql`
       UPDATE tool_call_approvals

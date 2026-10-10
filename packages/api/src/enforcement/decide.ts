@@ -14,6 +14,13 @@ export interface DecideDeps {
   now(): Date;
 }
 
+/** Denials a log_only passport can never turn into observe-only: containment and the approval gate. */
+const ALWAYS_ENFORCED: ReadonlySet<string> = new Set([
+  'forbid-containment-isolation',
+  'forbid-containment-declawed',
+  'forbid-passport-not-approved',
+]);
+
 interface Verdict {
   decision: Outcome;
   reasons: string[];
@@ -48,11 +55,12 @@ async function evaluate(
     return deny(['policy_error'], seen);
   }
 
-  // From here the decision is a policy decision, so log-only mode applies.
+  // From here the decision is a policy decision, so log-only mode applies, except to the
+  // kill switches: containment and the approval gate are never observe-only.
   // Anything but an explicit log_only enforces, so an unexpected mode fails closed.
-  const enforced = resolved.passport.enforcement.mode !== 'log_only';
+  const logOnly = resolved.passport.enforcement.mode === 'log_only';
   const verdict = (decision: Outcome, reasons: string[], approvalId: string | null = null): Verdict =>
-    ({ decision, reasons, enforced, approvalId, ...seen });
+    ({ decision, reasons, enforced: !logOnly || reasons.some((r) => ALWAYS_ENFORCED.has(r)), approvalId, ...seen });
 
   if (!result.invoke.allowed) return verdict('deny', result.invoke.reasons);
   if (result.unattended.allowed) return verdict('allow', result.unattended.reasons);

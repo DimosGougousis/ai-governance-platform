@@ -199,7 +199,9 @@ Every decision writes a `policy_decisions` audit row and a C6 `guardrail_events`
 GOVERNANCE_REPO_DIR=/path/to/ProductGovernance4AgenticWorkflows pnpm --filter @governance/api governance:sync
 ```
 
-Configuration: `GOVERNANCE_REGISTRY_DIR`, `GOVERNANCE_SCHEMA_DIR`, `CEDAR_POLICY_DIR` (default: the vendored copies). Known limitation: the approval endpoints are unauthenticated, as is the rest of the API today.
+Configuration: `GOVERNANCE_REGISTRY_DIR`, `GOVERNANCE_SCHEMA_DIR`, `CEDAR_POLICY_DIR` (default: the vendored copies). In production `GOVERNANCE_REGISTRY_DIR` must point at the organisation's real registry of passports, MCP server entries and boundaries: the default is Finley's example registry, which would otherwise be the policy of record.
+
+Known limitation: the approval endpoints are unauthenticated, as is the rest of the API today. An agent that can reach `/approvals` can approve its own ticket, so agents and browsers must not be able to reach the decision point's `/approvals` and `/decide` routes except through the gateway sidecar. Enforce this with network policy; the platform does not.
 
 ## Dashboard Tiers
 

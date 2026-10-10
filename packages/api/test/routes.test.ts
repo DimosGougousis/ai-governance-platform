@@ -40,6 +40,12 @@ describe('POST /api/v1/decide', () => {
     expect((await decideCall(missing)).statusCode).toBe(400);
   });
 
+  test.each(['agent_id', 'server_id', 'operation'])('a 256-character %s is a 400 (the columns are varchar(255))', async (field) => {
+    await start();
+    expect((await decideCall({ ...body, [field]: 'x'.repeat(256) })).statusCode).toBe(400);
+    expect((await decideCall({ ...body, [field]: 'x'.repeat(255) })).statusCode).toBe(200);
+  });
+
   test('arguments and user_claims default to empty objects', async () => {
     await start();
     const { arguments: _a, user_claims: _u, ...bare } = body;

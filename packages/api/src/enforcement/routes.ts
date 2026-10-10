@@ -9,10 +9,10 @@ export interface EnforcementDeps extends DecideDeps {
 }
 
 const decideBody = z.object({
-  agent_id: z.string().min(1),
-  server_id: z.string().min(1),
+  agent_id: z.string().min(1).max(255),
+  server_id: z.string().min(1).max(255),
   server_version: z.string(),
-  operation: z.string().min(1),
+  operation: z.string().min(1).max(255),
   arguments: z.record(z.unknown()).default({}),
   observed_description_sha256: z.string(),
   user_claims: z.record(z.unknown()).default({}),

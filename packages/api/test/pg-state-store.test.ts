@@ -18,6 +18,11 @@ describe.skipIf(!url)('PgStateStore against Postgres (layer B)', () => {
   const key = { agent_id: FINLEY, server_id: SERVER, operation: 'get_transactions', args_sha256: 'a'.repeat(64) };
 
   beforeAll(async () => {
+    // The suite TRUNCATEs agents, policy_decisions and the approvals table: never let it near a real database.
+    const dbName = new URL(url!).pathname.replace(/^\//, '');
+    if (!dbName.endsWith('_test')) {
+      throw new Error(`Refusing to run: TEST_DATABASE_URL points at "${dbName}", whose name does not end in "_test". This suite truncates tables.`);
+    }
     client = postgres(url!, { max: 4, onnotice: () => {} });
     db = drizzle(client, { schema });
     await migrate(db, { migrationsFolder: 'src/db/migrations' });
@@ -37,6 +42,14 @@ describe.skipIf(!url)('PgStateStore against Postgres (layer B)', () => {
   test('getAgent finds the containment level by SPIFFE ID', async () => {
     expect(await store.getAgent(FINLEY)).toEqual({ id: agentRowId, containmentLevel: 2 });
     expect(await store.getAgent('spiffe://nobody')).toBeNull();
+  });
+
+  test('getAgent returns null when two agents share a SPIFFE ID, so the call is denied rather than guessed', async () => {
+    await db.insert(schema.agents).values({
+      agentName: 'Finley clone', agentType: 'advisory', version: '1.0.0', modelId: 'gpt-4o', modelVersion: '2026-02-15',
+      owner: 'J. Pietersen', team: 'Digital Banking', spiffeId: FINLEY, currentContainmentLevel: 0,
+    });
+    expect(await store.getAgent(FINLEY)).toBeNull();
   });
 
   test('concurrent escalations of one call share one pending ticket', async () => {
