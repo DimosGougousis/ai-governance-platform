@@ -1,0 +1,116 @@
+# =============================================================================
+# Example Agent Passport: "Finley" (Advisory Spending-Insights Agent)
+# =============================================================================
+# The worked example from 00-getting-started/agentic-governance-day-one.md as
+# a machine-readable passport. It validates against agent-passport-schema.yaml,
+# stays within tier-baselines.yaml#limited, and references:
+#   - its permission boundary:  example-agent-boundary.yaml (PB-FINLEY 1.0.0)
+#   - its MCP server:           example-mcp-server.yaml (mcp:customer-data-prod)
+#
+# Finley acts on behalf of a customer, so it is also the worked example of the
+# user-delegated pattern: the customer's claims travel with every tool call,
+# and Finley's effective authority is the narrower of the customer's rights
+# and Finley's own boundary.
+# =============================================================================
+
+agent_id: "agent:finley-prod-01"
+agent_name: "Finley"
+agent_type: advisory
+version: "1.0.0"
+
+purpose:
+  statement: "Explains a retail customer's spending patterns and suggests savings actions, in the bank's mobile app chat."
+  business_outcome: "Customers act on savings suggestions; measured by the insight acceptance rate in the eval suite."
+  intended_users:
+    - "Authenticated retail banking customers"
+  prohibited_uses:
+    - "Giving investment, credit or tax advice"
+    - "Initiating payments or changing account settings"
+    - "Answering questions about another customer's account"
+
+owner:
+  name: "J. Pietersen"
+  role: "Product Owner"
+  team: "Digital Banking"
+
+risk_tier: limited
+tier_baseline: "tier-baselines.yaml#limited"
+
+model:
+  provider: "Azure OpenAI"
+  model_id: "gpt-4o"
+  model_version: "2026-02-15"
+
+oversight:
+  model: HOTL
+  per_category:            # matches example-agent-boundary.yaml
+    read: hota
+    write: hotl
+    decide: hotl
+    act: hitl
+    escalate: hota
+  hitl_points:
+    - action: "Any response flagged with a vulnerability signal"
+      approver_role: "Customer Advisor"
+  escalation_route: "route_to_human_advisor -> Customer Advisor queue, 4-hour SLA"
+
+identity:
+  provider: spiffe
+  principal_id: "spiffe://bank.example/agent/finley-prod-01"
+  group_path: "agents/limited/digital-banking"
+  credential_ttl_minutes: 60          # tier ceiling is 1440
+  credential_providers:
+    - name: "customer-data-mcp"
+      kind: oauth2_user_delegated
+      vault_ref: "vault://agents/finley-prod-01/customer-data-mcp"
+
+access:
+  mode: on_behalf_of_user
+  consent:
+    mechanism: "In-app consent screen before the first Finley conversation"
+    record_ref: "consent-store: purpose=spending-insights"
+    revocable: true
+  user_claims_in_policy:
+    - claim: "customer_id"
+      must_match_input: "customer_id"
+  effective_authority: intersection
+
+permission_boundary_ref:
+  id: "PB-FINLEY"
+  version: "1.0.0"
+
+mcp_servers:
+  - server_id: "mcp:customer-data-prod"
+    allowed_operations:
+      - "get_transactions"
+      - "get_savings_goals"
+
+enforcement:
+  mode: enforce
+  boundary_version: "1.0.0"
+  log_only_days: 7                    # tier minimum is 7
+  log_only_started: "2026-01-19"
+  enforce_from: "2026-01-26"
+  log_only_evidence_ref: "SIEM saved search: finley-prod-01 policy decisions 2026-01-19..2026-01-26"
+
+operations:
+  health_check_endpoint: "https://agents.internal/finley/health"
+  health_check_interval_seconds: 300   # limited risk; high risk is 30
+
+kill_switch_ref: "KS-FINLEY-v1.0"
+fallback_procedure_ref: "FB-FINLEY-v1.0"
+eval_suite_ref: "ES-FINLEY-v1.0"
+
+compliance_frameworks:
+  - "EU AI Act"
+  - "GDPR"
+  - "DORA"
+
+registration:
+  status: approved
+  created_date: "2026-01-12"
+  approved_by:
+    name: "A. Jansen"
+    role: "Model Risk Manager"
+  approved_date: "2026-01-16"
+  review_due: "2026-07-16"

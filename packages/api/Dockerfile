@@ -44,6 +44,8 @@ COPY --from=build /app/packages/api/package.json ./packages/api/
 # Copy migration files and drizzle config
 COPY packages/api/src/db/migrations/ ./packages/api/dist/db/migrations/
 COPY packages/api/drizzle.config.ts ./packages/api/
+# Copy the vendored governance policy of record (Cedar policy, schemas, registry)
+COPY packages/api/governance/ ./packages/api/governance/
 
 # Copy entrypoint
 COPY packages/api/docker-entrypoint.sh /docker-entrypoint.sh

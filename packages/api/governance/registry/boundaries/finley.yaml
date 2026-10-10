@@ -1,0 +1,73 @@
+# =============================================================================
+# Example Agent Permission Boundary: "Finley" (Advisory Spending-Insights Agent)
+# =============================================================================
+# This is the worked example from 00-getting-started/agentic-governance-day-one.md
+# expressed as a machine-readable boundary document. It validates against
+# permission-boundary-schema.yaml and can be evaluated by
+# permission-boundary-policy.rego.
+# =============================================================================
+
+agent_name: "finley-prod-01"
+agent_type: advisory
+risk_tier: limited
+boundary_version: "1.0.0"
+owner: "J. Pietersen, Product Owner"
+
+permissions:
+  read:
+    allowed:
+      - "customer_transaction_history"
+      - "product_catalog"
+      - "customer_savings_goals"
+    denied:
+      - "other_customers_data"
+      - "internal_employee_data"
+      - "credit_bureau_data"
+
+  write:
+    allowed:
+      - "conversation_logs"
+      - "insight_feedback_records"
+    denied:
+      - "account_settings"
+      - "transaction_records"
+      - "customer_contact_details"
+
+  decide:
+    allowed:
+      - "spending_categorization"
+      - "insight_relevance_ranking"
+      - "savings_suggestion_selection"
+    denied:
+      - "credit_decisions"
+      - "fraud_flags"
+      - "vulnerability_determinations"
+
+  act:
+    allowed: []
+    denied:
+      - "payments"
+      - "account_modifications"
+      - "product_applications"
+      - "outbound_customer_communications"
+
+  escalate:
+    allowed:
+      - "route_to_human_advisor"
+      - "flag_vulnerability_signal"
+    denied:
+      - "escalate_to_external_parties"
+
+oversight:
+  read: hota
+  write: hotl
+  decide: hotl
+  act: hitl        # moot (no ACT permissions) but explicit
+  escalate: hota
+
+delegation:
+  can_delegate: true
+  allowed_sub_agents:
+    - "transaction-categorization-service"
+  max_depth: 1
+  permission_inheritance: narrower

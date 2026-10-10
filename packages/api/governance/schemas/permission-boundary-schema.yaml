@@ -1,0 +1,129 @@
+# =============================================================================
+# Permission Boundary Schema (JSON Schema, YAML-serialized)
+# Product Governance for Agentic AI Workflows
+# =============================================================================
+# Version: 1.0.0
+# Last Updated: 2026-09-08
+# Owner: AI Governance Office
+# Cross-ref: ../../03-runtime-governance/agentic-workflows/agent-permission-boundaries.md
+# =============================================================================
+# Machine-readable schema for agent permission boundaries. A boundary document
+# that validates against this schema can be evaluated by the companion OPA
+# policy (permission-boundary-policy.rego) to allow, deny, or escalate agent
+# action requests at runtime.
+#
+# Validate a boundary document with:
+#   python -c "import yaml, jsonschema; jsonschema.validate(
+#       yaml.safe_load(open('examples/example-agent-boundary.yaml')),
+#       yaml.safe_load(open('permission-boundary-schema.yaml')))"
+# =============================================================================
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://governance.example/schemas/permission-boundary-1.0.0.json"
+title: "Agent Permission Boundary"
+description: >
+  Machine-readable permission boundary for an AI agent, expressing the five
+  action categories (READ, WRITE, DECIDE, ACT, ESCALATE) with explicit
+  allowed and denied lists, plus the oversight model per category.
+type: object
+required:
+  - agent_name
+  - agent_type
+  - risk_tier
+  - boundary_version
+  - owner
+  - permissions
+  - oversight
+additionalProperties: false
+
+properties:
+  agent_name:
+    type: string
+    minLength: 1
+    description: "The agent's agent_id from its passport, without the agent: prefix (e.g. finley-prod-01)"
+
+  agent_type:
+    type: string
+    enum: [informational, advisory, decision_making, autonomous_actor, orchestrator]
+    description: "Agent type per the multi-agent governance framework Section 1"
+
+  risk_tier:
+    type: string
+    enum: [minimal, limited, high]
+    description: "EU AI Act risk tier as classified at discovery"
+
+  boundary_version:
+    type: string
+    pattern: '^\d+\.\d+\.\d+$'
+    description: "Semantic version of this boundary document"
+
+  owner:
+    type: string
+    minLength: 1
+    description: "Named model owner accountable for this boundary"
+
+  permissions:
+    type: object
+    description: "Allowed and denied capabilities per action category"
+    required: [read, write, decide, act, escalate]
+    additionalProperties: false
+    patternProperties:
+      ^(read|write|decide|act|escalate)$:
+        type: object
+        required: [allowed, denied]
+        additionalProperties: false
+        properties:
+          allowed:
+            type: array
+            items: { type: string, minLength: 1 }
+            uniqueItems: true
+            description: "Explicitly permitted capabilities (deny-by-default)"
+          denied:
+            type: array
+            items: { type: string, minLength: 1 }
+            uniqueItems: true
+            description: "Explicitly prohibited capabilities; MUST NOT be empty for write, decide, act"
+
+  oversight:
+    type: object
+    description: "Human oversight model per action category"
+    required: [read, write, decide, act, escalate]
+    additionalProperties: false
+    patternProperties:
+      ^(read|write|decide|act|escalate)$:
+        type: string
+        enum: [hitl, hotl, hota]
+        description: "hitl = approve every action; hotl = monitor and intervene; hota = audit retrospectively"
+
+  delegation:
+    type: object
+    description: "Delegation policy (optional; omit if the agent cannot delegate)"
+    additionalProperties: false
+    properties:
+      can_delegate:
+        type: boolean
+      allowed_sub_agents:
+        type: array
+        items: { type: string }
+        description: "Registry names of agents this agent may invoke"
+      max_depth:
+        type: integer
+        minimum: 1
+        description: "Maximum delegation chain depth"
+      permission_inheritance:
+        type: string
+        enum: [narrower, equal]
+        description: "Sub-agent scope relative to this agent; 'equal' requires AI Governance Committee approval"
+    required: [can_delegate]
+
+# Conditional rule: high-risk agents must not use hota for act or decide
+allOf:
+  - if:
+      properties:
+        risk_tier: { const: high }
+    then:
+      properties:
+        oversight:
+          properties:
+            act: { enum: [hitl] }
+            decide: { enum: [hitl, hotl] }

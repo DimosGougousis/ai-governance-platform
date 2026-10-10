@@ -1,6 +1,6 @@
 import {
   pgTable, uuid, varchar, text, integer, decimal, boolean, timestamp,
-  jsonb, pgEnum, index, uniqueIndex, check,
+  jsonb, pgEnum, index, uniqueIndex, check, real,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -271,3 +271,49 @@ export const nhiCredentials = pgTable('nhi_credentials', {
   revocationReason: text('revocation_reason'),
   jitTokenHash: varchar('jit_token_hash', { length: 64 }),
 });
+
+// ─── Pre-execution enforcement ─────────────────────────────────────────────
+export const toolCallApprovalStatusEnum = pgEnum('tool_call_approval_status', ['pending', 'approved', 'rejected', 'consumed', 'expired']);
+export const policyDecisionOutcomeEnum = pgEnum('policy_decision_outcome', ['allow', 'deny', 'escalate']);
+
+export const toolCallApprovals = pgTable('tool_call_approvals', {
+  id: varchar('id', { length: 40 }).primaryKey(),
+  agentId: varchar('agent_id', { length: 255 }).notNull(),          // SPIFFE principal
+  serverId: varchar('server_id', { length: 255 }).notNull(),
+  operation: varchar('operation', { length: 255 }).notNull(),
+  argsSha256: varchar('args_sha256', { length: 64 }).notNull(),
+  status: toolCallApprovalStatusEnum('status').notNull().default('pending'),
+  requestedAt: timestamp('requested_at', { withTimezone: true }).notNull(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+  decidedBy: varchar('decided_by', { length: 255 }),
+  decidedRole: varchar('decided_role', { length: 255 }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  consumedAt: timestamp('consumed_at', { withTimezone: true }),
+  consumedByDecisionId: varchar('consumed_by_decision_id', { length: 40 }),
+}, (t) => ({
+  callIdx: index('tool_call_approvals_call_idx').on(t.agentId, t.serverId, t.operation, t.argsSha256, t.status),
+  onePending: uniqueIndex('tool_call_approvals_one_pending')
+    .on(t.agentId, t.serverId, t.operation, t.argsSha256)
+    .where(sql`status = 'pending'`),
+}));
+
+export const policyDecisions = pgTable('policy_decisions', {
+  id: varchar('id', { length: 40 }).primaryKey(),                  // decision_id
+  agentId: varchar('agent_id', { length: 255 }).notNull(),
+  platformAgentId: uuid('platform_agent_id'),
+  serverId: varchar('server_id', { length: 255 }).notNull(),
+  operation: varchar('operation', { length: 255 }).notNull(),
+  argsSha256: varchar('args_sha256', { length: 64 }).notNull(),
+  request: jsonb('request').notNull(),                             // no argument or claim values
+  outcome: policyDecisionOutcomeEnum('outcome').notNull(),
+  enforced: boolean('enforced').notNull(),
+  reasons: jsonb('reasons').notNull(),
+  policySha256: varchar('policy_sha256', { length: 64 }).notNull(),
+  boundaryVersion: varchar('boundary_version', { length: 50 }),
+  containmentLevel: integer('containment_level'),
+  approvalId: varchar('approval_id', { length: 40 }),
+  latencyMs: real('latency_ms').notNull(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }).notNull(),
+}, (t) => ({
+  agentIdx: index('policy_decisions_agent_idx').on(t.agentId, t.decidedAt),
+}));

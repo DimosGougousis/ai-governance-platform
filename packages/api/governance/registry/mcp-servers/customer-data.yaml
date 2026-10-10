@@ -1,0 +1,68 @@
+# =============================================================================
+# Example MCP Server Register Entry: Customer Data (serves "Finley")
+# =============================================================================
+# The in-house MCP server through which Finley, the worked example from
+# 00-getting-started/agentic-governance-day-one.md, reads a customer's own
+# data. It validates against mcp-server-schema.yaml. Finley's passport
+# (example-agent-passport.yaml) lists this server and the operations it may
+# call on it.
+#
+# The server owns the boundary that matters most for Finley: it returns only
+# the data of the customer whose claims arrive with the call. Finley cannot be
+# talked into reading another customer's transactions, because no operation on
+# this server can return them.
+# =============================================================================
+
+server_id: "mcp:customer-data-prod"
+name: "Customer Data MCP Server"
+purpose: "Read-only access to a single authenticated customer's own transactions and savings goals, with redaction applied server-side."
+
+owner:
+  name: "R. de Vries"
+  role: "Data Platform Lead"
+  team: "Customer Data Platform"
+
+provenance: in_house
+version: "1.4.2"
+transport: streamable_http
+endpoint: "https://mcp.internal/customer-data"
+
+authentication:
+  method: workload_identity
+  audience: "mcp:customer-data-prod"
+
+data_classification: confidential
+
+operations:
+  - name: "get_transactions"
+    access: read
+    boundary_action: "customer_transaction_history"
+    description: "Returns the authenticated customer's own transactions for a date range, categorised."
+    description_sha256: "0b0c7a11f2877cea1ed2817698e4b00700e4003553bb4e746046c2b1df1abd9b"
+    requires_user_context: true
+  - name: "get_savings_goals"
+    access: read
+    boundary_action: "customer_savings_goals"
+    description: "Returns the authenticated customer's own savings goals and progress."
+    description_sha256: "1e8d81d8e6f7a9302d95adb98bd35da93425ce3f2b803c1009d8ec9ef43cb413"
+    requires_user_context: true
+
+server_side_controls:
+  - "Every query is filtered to the customer_id in the delegating user's verified claims"
+  - "Account numbers and counterparty names are masked before data leaves the server"
+  - "No write, update or delete operation is exposed"
+  - "Rate limit per agent principal: 60 calls per minute"
+
+logging:
+  every_call_logged: true
+  destination: "Central SIEM (agent principal, user claim, operation, result size)"
+  retention: "7 years"
+
+registration:
+  status: approved
+  created_date: "2026-01-12"
+  approved_by:
+    name: "K. Bakker"
+    role: "Head of Security Engineering"
+  approved_date: "2026-01-14"
+  review_due: "2026-07-14"

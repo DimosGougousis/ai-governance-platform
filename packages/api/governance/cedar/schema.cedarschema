@@ -1,0 +1,44 @@
+// =============================================================================
+// Tool-Call Policy Schema (Cedar)
+// =============================================================================
+// Entities and actions the tool-call policy (tool-call.cedar) is written
+// against. The platform's decision point builds one Agent and one Operation
+// per request from the agent passport, the MCP server register and the
+// permission boundary.
+//
+// Category-keyed data is flattened to "category:action" strings because a
+// Cedar record cannot have keys chosen at request time, and server facts are
+// copied onto Operation because Cedar cannot read a parent entity's
+// attributes.
+// =============================================================================
+namespace Governance {
+  entity Agent = {
+    registration_status: String,       // passport registration.status
+    containment_level: Long,           // MI9 level 0-4, live from the platform
+    allowed_operations: Set<String>,   // "server_id#operation" from the passport
+    boundary_allowed: Set<String>,     // "category:action" from the boundary
+    boundary_denied: Set<String>,      // "category:action" from the boundary
+    unattended_categories: Set<String>, // categories with hotl or hota oversight
+  };
+
+  entity Operation = {
+    server_op: String,                 // "server_id#operation"
+    access: String,                    // read | write | act (register access class)
+    boundary_key: String,              // "access:boundary_action"
+    description_sha256: String,        // pinned in the register
+    requires_user_context: Bool,
+    server_status: String,             // the server's register registration.status
+    server_pinned_version: String,     // the server's register version
+  };
+
+  action invoke, invoke_unattended appliesTo {
+    principal: [Agent],
+    resource: [Operation],
+    context: {
+      observed_server_version: String,      // what the running server reports
+      observed_description_sha256: String,  // hash of the description it advertises
+      review_overdue: Bool,                 // passport review_due has passed
+      user_claims_match: Bool,              // delegating user's claims match the input
+    }
+  };
+}
