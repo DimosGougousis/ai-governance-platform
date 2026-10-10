@@ -1,27 +1,18 @@
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import { agentRoutes } from './routes/agents.js';
-import { governanceRoutes } from './routes/governance.js';
-import { dashboardRoutes } from './routes/dashboard.js';
-import { registerWebhookReceiver } from './ingestion/webhook-receiver.js';
-import { registerBulkImporter } from './ingestion/bulk-importer.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { buildApp } from './app.js';
+import { createEnforcement, MemoryStateStore } from './enforcement/index.js';
 
-const app = Fastify({ logger: true });
+const governanceDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../governance');
 
-await app.register(cors, { origin: true });
+const enforcement = createEnforcement({
+  registryDir: process.env.GOVERNANCE_REGISTRY_DIR || path.join(governanceDir, 'registry'),
+  schemaDir: process.env.GOVERNANCE_SCHEMA_DIR || path.join(governanceDir, 'schemas'),
+  cedarDir: process.env.CEDAR_POLICY_DIR || path.join(governanceDir, 'cedar'),
+  store: new MemoryStateStore(),
+});
 
-// Health check (both root and under API prefix for Docker/Nginx)
-app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
-app.get('/api/v1/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
-
-// API routes
-app.register(agentRoutes, { prefix: '/api/v1' });
-app.register(governanceRoutes, { prefix: '/api/v1' });
-app.register(dashboardRoutes, { prefix: '/api/v1' });
-
-// Tool-agnostic ingestion layer
-app.register(registerWebhookReceiver);
-app.register(registerBulkImporter);
+const app = await buildApp(enforcement);
 
 const port = parseInt(process.env.API_PORT || '4000', 10);
 const host = process.env.API_HOST || '0.0.0.0';
