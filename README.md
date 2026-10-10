@@ -182,6 +182,25 @@ ai-governance-platform/
 | `GET` | `/api/v1/dashboard/tier/:tier` | Tier-specific dashboard data |
 | `GET` | `/api/v1/governance/safest` | SAFEST compliance items |
 
+## Pre-Execution Enforcement
+
+The platform is also the **policy decision point** for the MCP governance gateway (in the governance framework repository, `05-cross-cutting/policy-as-code/gateway/`). The gateway asks before every MCP tool call; a call that is not allowed never reaches its server.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/v1/decide` | Allow / deny / escalate one tool call, evaluated by the Cedar policy against the agent's passport, the MCP server register, the boundary and the agent's containment level |
+| `GET /api/v1/approvals?status=pending` | HITL approval queue |
+| `POST /api/v1/approvals/:id/approve` / `reject` | Decide a ticket; an approval allows one identical retry within 15 minutes, and an approval whose decision cannot be audited is released, not consumed |
+| `POST /api/v1/registry/reload` | Re-read the governance registry |
+
+Every decision writes a `policy_decisions` audit row and a C6 `guardrail_events` row. The Cedar policy, schemas and example registry are vendored under `packages/api/governance/` from the governance repository:
+
+```bash
+GOVERNANCE_REPO_DIR=/path/to/ProductGovernance4AgenticWorkflows pnpm --filter @governance/api governance:sync
+```
+
+Configuration: `GOVERNANCE_REGISTRY_DIR`, `GOVERNANCE_SCHEMA_DIR`, `CEDAR_POLICY_DIR` (default: the vendored copies). Known limitation: the approval endpoints are unauthenticated, as is the rest of the API today.
+
 ## Dashboard Tiers
 
 | Tier | Audience | Refresh | Key Metrics |
