@@ -112,10 +112,20 @@ describe('decide -- verification failures always deny and are enforced', () => {
   });
 
   test('audit_unavailable', async () => {
-    const { d, store } = deps({ edit: logOnly });
+    // The pre-audit verdict is an escalate with a ticket, so dropping approval_id is observable.
+    const { d, store } = deps({ edit: (f) => { logOnly(f); f.boundary = f.boundary.replace(/read: hota/, 'read: hitl'); } });
     store.failRecord = true;
     const r = await decide(d, request());
     expect(r).toMatchObject({ decision: 'deny', enforced: true, reasons: ['audit_unavailable'] });
+    expect(r.approval_id).toBeUndefined();
+    expect(store.approvals.size).toBe(1);
+  });
+
+  test('state_unavailable from the approval path', async () => {
+    const { d, store } = deps({ edit: (f) => { logOnly(f); f.boundary = f.boundary.replace(/read: hota/, 'read: hitl'); } });
+    store.failApprovals = true;
+    const r = await decide(d, request());
+    expect(r).toMatchObject({ decision: 'deny', enforced: true, reasons: ['state_unavailable'] });
     expect(r.approval_id).toBeUndefined();
   });
 });
@@ -130,5 +140,14 @@ describe('decide -- the audit record', () => {
     expect(JSON.stringify(rec)).not.toContain('C-1001');
     expect(rec).toMatchObject({ decision: 'allow', enforced: true, containment_level: 0, boundary_version: '1.0.0' });
     expect(rec.platform_agent_id).toBeTruthy();
+  });
+
+  test('persists only the allowlisted request fields, whatever else the request carries', async () => {
+    const { d, store } = deps();
+    await decide(d, { ...request(), secret: 'leaky-value', nested: { token: 'tok' } } as unknown as DecideRequest);
+    const rec = store.decisions[0];
+    expect(Object.keys(rec.request).sort()).toEqual(['agent_id', 'observed_description_sha256', 'operation', 'server_id', 'server_version', 'user_claim_keys']);
+    expect(JSON.stringify(rec)).not.toContain('leaky-value');
+    expect(JSON.stringify(rec)).not.toContain('tok');
   });
 });

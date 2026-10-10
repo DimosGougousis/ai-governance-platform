@@ -49,7 +49,8 @@ async function evaluate(
   }
 
   // From here the decision is a policy decision, so log-only mode applies.
-  const enforced = resolved.passport.enforcement.mode === 'enforce';
+  // Anything but an explicit log_only enforces, so an unexpected mode fails closed.
+  const enforced = resolved.passport.enforcement.mode !== 'log_only';
   const verdict = (decision: Outcome, reasons: string[], approvalId: string | null = null): Verdict =>
     ({ decision, reasons, enforced, approvalId, ...seen });
 
@@ -90,11 +91,18 @@ export async function decide(deps: DecideDeps, req: DecideRequest): Promise<Deci
     boundary_version: boundaryVersion,
   };
 
-  const { arguments: _args, user_claims, ...rest } = req;
   try {
     await deps.store.recordDecision({
       decision_id: decisionId,
-      request: { ...rest, user_claim_keys: Object.keys(user_claims ?? {}).sort() },
+      // An explicit allowlist: nothing else on the request is ever persisted.
+      request: {
+        agent_id: req.agent_id,
+        server_id: req.server_id,
+        server_version: req.server_version,
+        operation: req.operation,
+        observed_description_sha256: req.observed_description_sha256,
+        user_claim_keys: Object.keys(req.user_claims ?? {}).sort(),
+      },
       args_sha256: argsSha256,
       decision: v.decision,
       enforced: v.enforced,
@@ -108,7 +116,16 @@ export async function decide(deps: DecideDeps, req: DecideRequest): Promise<Deci
       decided_at: now,
     });
   } catch {
-    // A decision that cannot be audited is not made (SAFEST A-11).
+    // A decision that cannot be audited is not made (SAFEST A-11), so an approval it
+    // consumed goes back to the human who gave it. A failed release is swallowed: the
+    // response is already a denial.
+    if (v.decision === 'allow' && v.approvalId) {
+      try {
+        await deps.store.releaseApproval(v.approvalId, decisionId);
+      } catch {
+        // nothing more to do
+      }
+    }
     return { decision_id: decisionId, decision: 'deny', enforced: true, reasons: ['audit_unavailable'], policy_sha256: deps.engine.policySha256, boundary_version: boundaryVersion };
   }
   return response;

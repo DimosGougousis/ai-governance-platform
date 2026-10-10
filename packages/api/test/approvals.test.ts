@@ -78,6 +78,34 @@ describe('approval tickets', () => {
     expect((await w.store.listApprovals('expired', w.d.now())).map((a) => a.id)).toEqual([first.approval_id]);
   });
 
+  test('an approval is not burned when the audit write fails', async () => {
+    const w = hitlWorld();
+    const first = await decide(w.d, request());
+    await approve(w, first.approval_id!);
+    w.store.failRecord = true;
+    const failed = await decide(w.d, request());
+    expect(failed).toMatchObject({ decision: 'deny', enforced: true, reasons: ['audit_unavailable'] });
+    const ticket = w.store.approvals.get(first.approval_id!)!;
+    expect(ticket.status).toBe('approved');
+    expect(ticket.consumed_at).toBeNull();
+    expect(ticket.consumed_by_decision_id).toBeNull();
+    w.store.failRecord = false;
+    expect(await decide(w.d, request())).toMatchObject({ decision: 'allow', reasons: ['approved-ticket'] });
+    expect(w.store.approvals.get(first.approval_id!)?.status).toBe('consumed');
+  });
+
+  test('releaseApproval only undoes the consumption by the named decision', async () => {
+    const w = hitlWorld();
+    const first = await decide(w.d, request());
+    await approve(w, first.approval_id!);
+    const key = { agent_id: FINLEY, server_id: SERVER, operation: 'get_transactions', args_sha256: w.store.approvals.get(first.approval_id!)!.args_sha256 };
+    await w.store.consumeApproval(key, 'dec_a', w.d.now());
+    await w.store.releaseApproval(first.approval_id!, 'dec_other');
+    expect(w.store.approvals.get(first.approval_id!)?.status).toBe('consumed');
+    await w.store.releaseApproval(first.approval_id!, 'dec_a');
+    expect(w.store.approvals.get(first.approval_id!)?.status).toBe('approved');
+  });
+
   test('only a pending ticket can be decided', async () => {
     const w = hitlWorld();
     const first = await decide(w.d, request());

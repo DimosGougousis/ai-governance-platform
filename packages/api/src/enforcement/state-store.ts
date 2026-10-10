@@ -41,6 +41,8 @@ export interface StateStore {
   getAgent(spiffeId: string): Promise<{ id: string; containmentLevel: number } | null>;
   /** Atomically consume an approved, unexpired ticket for this exact call. */
   consumeApproval(key: ApprovalKey, decisionId: string, now: Date): Promise<string | null>;
+  /** Undo consumeApproval when the decision that consumed it could not be audited: consumed -> approved, only if consumed_by_decision_id matches. */
+  releaseApproval(id: string, decisionId: string): Promise<void>;
   /** The pending ticket for this exact call, created if none is pending. */
   findOrCreatePending(key: ApprovalKey, now: Date): Promise<Approval>;
   /** Marks lapsed approvals expired, then lists (optionally by status), newest first. */

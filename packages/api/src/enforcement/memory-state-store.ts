@@ -8,6 +8,8 @@ export class MemoryStateStore implements StateStore {
   readonly decisions: DecisionRecord[] = [];
   /** Fault injection: state reads and writes throw. */
   failState = false;
+  /** Fault injection: approval-ticket reads and writes (consume, find-or-create) throw. */
+  failApprovals = false;
   /** Fault injection: the audit write throws. */
   failRecord = false;
 
@@ -30,6 +32,7 @@ export class MemoryStateStore implements StateStore {
 
   async consumeApproval(key: ApprovalKey, decisionId: string, now: Date) {
     this.guard();
+    if (this.failApprovals) throw new Error('approval store unavailable');
     for (const a of this.approvals.values()) {
       if (MemoryStateStore.same(a, key) && a.status === 'approved' && a.expires_at && a.expires_at > now) {
         a.status = 'consumed';
@@ -41,8 +44,19 @@ export class MemoryStateStore implements StateStore {
     return null;
   }
 
+  async releaseApproval(id: string, decisionId: string) {
+    this.guard();
+    const a = this.approvals.get(id);
+    if (a && a.status === 'consumed' && a.consumed_by_decision_id === decisionId) {
+      a.status = 'approved';
+      a.consumed_at = null;
+      a.consumed_by_decision_id = null;
+    }
+  }
+
   async findOrCreatePending(key: ApprovalKey, now: Date) {
     this.guard();
+    if (this.failApprovals) throw new Error('approval store unavailable');
     for (const a of this.approvals.values()) if (MemoryStateStore.same(a, key) && a.status === 'pending') return a;
     const a: Approval = {
       id: `apr_${nanoid()}`, ...key, status: 'pending', requested_at: now, decided_at: null, decided_by: null,
